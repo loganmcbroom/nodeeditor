@@ -117,8 +117,8 @@ embedQWidget()
 
     update();
 
-    _proxyWidget->setOpacity(1.0);
-    _proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity);
+	_proxyWidget->setOpacity(1.0);
+	_proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity, true);
   }
 }
 
@@ -171,6 +171,14 @@ lock(bool locked)
 }
 
 
+FlowScene &
+NodeGraphicsObject::
+getScene()
+{
+  return _scene;
+}
+
+
 void
 NodeGraphicsObject::
 paint(QPainter * painter,
@@ -200,6 +208,8 @@ void
 NodeGraphicsObject::
 mousePressEvent(QGraphicsSceneMouseEvent * event)
 {
+  node().nodeDataModel()->clicked();
+
   if (_locked)
     return;
 
@@ -224,16 +234,18 @@ mousePressEvent(QGraphicsSceneMouseEvent * event)
       NodeState const & nodeState = _node.nodeState();
 
       std::unordered_map<QUuid, Connection*> connections =
-        nodeState.connections(portToCheck, portIndex);
+		nodeState.connections(portToCheck, portIndex);
 
       // start dragging existing connection
       if (!connections.empty() && portToCheck == PortType::In)
       {
-        auto con = connections.begin()->second;
+		auto con = connections.begin()->second;
+
+		_scene.undoStack->push( new ConnectionRemoveCommand( *con ) );
 
         NodeConnectionInteraction interaction(_node, *con, _scene);
 
-        interaction.disconnect(portToCheck);
+		interaction.disconnect(portToCheck);
       }
       else // initialize new Connection
       {
@@ -242,8 +254,15 @@ mousePressEvent(QGraphicsSceneMouseEvent * event)
           auto const outPolicy = _node.nodeDataModel()->portOutConnectionPolicy(portIndex);
           if (!connections.empty() &&
               outPolicy == NodeDataModel::ConnectionPolicy::One)
-          {
-            _scene.deleteConnection( *connections.begin()->second );
+		  {
+			auto con = connections.begin()->second;
+
+			_scene.undoStack->push( new ConnectionRemoveCommand( *con ) );
+
+			_scene.deleteConnection( *con );
+
+			//con->getNode( PortType::Out )->nodeDataModel()->outputConnectionDeleted( *con );
+			//con->getNode( PortType::In )->nodeDataModel()->inputConnectionDeleted( *con );
           }
         }
 
@@ -261,16 +280,20 @@ mousePressEvent(QGraphicsSceneMouseEvent * event)
     }
   }
 
-  auto pos     = event->pos();
-  auto & geom  = _node.nodeGeometry();
-  auto & state = _node.nodeState();
-
-  if (_node.nodeDataModel()->resizable() &&
-      geom.resizeRect().contains(QPoint(pos.x(),
-                                        pos.y())))
   {
-    state.setResizing(true);
+	auto pos     = event->pos();
+	auto & geom  = _node.nodeGeometry();
+	auto & state = _node.nodeState();
+
+	if (_node.nodeDataModel()->resizable() &&
+	  geom.resizeRect().contains(QPoint(pos.x(),
+										pos.y())))
+	{
+	state.setResizing(true);
+	}
   }
+
+  oldPos = pos();
 }
 
 
@@ -309,6 +332,15 @@ mouseMoveEvent(QGraphicsSceneMouseEvent * event)
   }
   else
   {
+//	if( event->modifiers() & Qt::ControlModifier )
+//	  {
+//	  Node & newNode = getScene().createNodeFromName( node().nodeDataModel()->name(), node().nodeGraphicsObject().pos() );
+//	  newNode.nodeGraphicsObject().scene()->clearSelection();
+//	  newNode.nodeGraphicsObject().setSelected( true );
+//	  newNode.nodeGraphicsObject().grabMouse();
+//	  return;
+//	  }
+
     QGraphicsObject::mouseMoveEvent(event);
 
     if (event->lastPos() != event->pos())
@@ -337,6 +369,9 @@ mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
   // position connections precisely after fast node move
   moveConnections();
+
+  if( oldPos != pos() && _scene.undoStack )
+	_scene.undoStack->push( new NodeMoveCommand( *this, oldPos ) );
 }
 
 
@@ -413,3 +448,30 @@ contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
   _scene.nodeContextMenu(node(), mapToScene(event->pos()));
 }
+
+using QtNodes::NodeMoveCommand;
+
+NodeMoveCommand::NodeMoveCommand( NodeGraphicsObject & nodeGO, QPointF oldPos, QUndoCommand * parent )
+	: QUndoCommand( parent )
+	, scene( nodeGO.getScene() )
+	, id( nodeGO.node().id() )
+	, oldPos( oldPos )
+	, newPos( nodeGO.pos() )
+	{
+	}
+
+void NodeMoveCommand::undo()
+	{
+	auto & nodeGO = scene.nodes().at( id )->nodeGraphicsObject();
+	nodeGO.setPos( oldPos );
+	nodeGO.moveConnections();
+	setText( QString("Node moved to: (") + QString::number( newPos.x() ) + "," + QString::number( newPos.y() ) + ")" );
+	}
+
+void NodeMoveCommand::redo()
+	{
+	auto & nodeGO = scene.nodes().at( id )->nodeGraphicsObject();
+	nodeGO.setPos( newPos );
+	nodeGO.moveConnections();
+	setText( QString( "Node moved to: (" ) + QString::number( newPos.x() ) + "," + QString::number( newPos.y() ) + ")" );
+	}

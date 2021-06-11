@@ -135,6 +135,15 @@ void ConnectionGraphicsObject::lock(bool locked)
 }
 
 
+FlowScene &
+ConnectionGraphicsObject::
+getScene()
+{
+return _scene;
+}
+
+
+
 void
 ConnectionGraphicsObject::
 paint(QPainter* painter,
@@ -216,7 +225,7 @@ mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
   if (_connection.connectionState().requiresPort())
   {
-    _scene.deleteConnection(_connection);
+	_scene.deleteConnection(_connection);
   }
 }
 

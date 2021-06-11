@@ -34,6 +34,8 @@ class NODE_EDITOR_PUBLIC NodeDataModel
 
 public:
 
+  Node * parent;
+
   NodeDataModel();
 
   virtual
@@ -87,11 +89,11 @@ public:
     return ConnectionPolicy::Many;
   }
 
-  NodeStyle const&
+  virtual NodeStyle const&
   nodeStyle() const;
 
-  void
-  setNodeStyle(NodeStyle const& style);
+//  void
+//  setNodeStyle(NodeStyle const& style);
 
 public:
 
@@ -124,25 +126,33 @@ public:
   virtual
   NodePainterDelegate* painterDelegate() const { return nullptr; }
 
+  virtual
+  void
+  clicked() {}
+
+  virtual
+  void
+  loaded() {}
+
 public Q_SLOTS:
 
   virtual void
-  inputConnectionCreated(Connection const&)
+  inputConnectionCreated( PortIndex i )
   {
   }
 
   virtual void
-  inputConnectionDeleted(Connection const&)
+  inputConnectionDeleted( PortIndex i )
   {
   }
 
   virtual void
-  outputConnectionCreated(Connection const&)
+  outputConnectionCreated( PortIndex i )
   {
   }
 
   virtual void
-  outputConnectionDeleted(Connection const&)
+  outputConnectionDeleted( PortIndex i )
   {
   }
 
@@ -160,10 +170,17 @@ Q_SIGNALS:
   void
   computingFinished();
 
-  void embeddedWidgetSizeUpdated();
+  void
+  embeddedWidgetSizeUpdated();
+
+  void
+  graphicsUpdateRequested();
+
+  void
+  nPortsChanged();
 
 private:
 
-  NodeStyle _nodeStyle;
+  //NodeStyle _nodeStyle;
 };
 }

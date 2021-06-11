@@ -2,9 +2,6 @@
 
 #include <QtCore/QString>
 
-namespace QtNodes
-{
-
 class Style
 {
 public:
@@ -23,5 +20,3 @@ private:
   virtual void
   loadJsonFromByteArray(QByteArray const &byteArray) = 0;
 };
-
-}

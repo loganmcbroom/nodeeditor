@@ -55,7 +55,7 @@ paint(QPainter* painter,
   /// call custom painter
   if (auto painterDelegate = model->painterDelegate())
   {
-    painterDelegate->paint(painter, geom, model);
+	painterDelegate->paint(painter, geom, model);
   }
 }
 
@@ -245,7 +245,7 @@ drawModelName(QPainter * painter,
   if (!model->captionVisible())
     return;
 
-  QString const &name = model->caption();
+  QString const &name = model->name();
 
   QFont f = painter->font();
 

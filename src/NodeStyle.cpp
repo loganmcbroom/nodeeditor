@@ -45,6 +45,11 @@ setNodeStyle(QString jsonText)
   StyleCollection::setNodeStyle(style);
 }
 
+NodeStyle & NodeStyle::style()
+{
+  return StyleCollection::nodeStyle();
+}
+
 
 #ifdef STYLE_DEBUG
   #define NODE_STYLE_CHECK_UNDEFINED_VALUE(v, variable) { \

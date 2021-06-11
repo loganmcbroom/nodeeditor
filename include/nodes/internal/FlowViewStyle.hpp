@@ -19,6 +19,7 @@ public:
 public:
 
   static void setStyle(QString jsonText);
+  static FlowViewStyle & style();
 
 private:
 

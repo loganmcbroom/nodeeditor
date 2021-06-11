@@ -1,11 +1,9 @@
 #pragma once
 
-#include <functional>
-#include <memory>
 #include <set>
-#include <type_traits>
+#include <memory>
+#include <functional>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include <QtCore/QString>
@@ -36,11 +34,11 @@ public:
 
   using RegistryItemPtr     = std::unique_ptr<NodeDataModel>;
   using RegistryItemCreator = std::function<RegistryItemPtr()>;
-  using RegisteredModelCreatorsMap = std::unordered_map<QString, RegistryItemCreator>;
-  using RegisteredModelsCategoryMap = std::unordered_map<QString, QString>;
+  using RegisteredModelCreatorsMap = std::map<QString, RegistryItemCreator>;
+  using RegisteredModelsCategoryMap = std::map<QString, QString>;
   using CategoriesSet = std::set<QString>;
 
-  using RegisteredTypeConvertersMap = std::map<TypeConverterId, TypeConverter>;
+  using RegisteredTypeConvertersMap = std::map<TypeConverterId, SharedTypeConverter>;
 
   DataModelRegistry()  = default;
   ~DataModelRegistry() = default;
@@ -57,46 +55,27 @@ public:
   void registerModel(RegistryItemCreator creator,
                      QString const &category = "Nodes")
   {
-    const QString name = computeName<ModelType>(HasStaticMethodName<ModelType>{}, creator);
-    if (!_registeredItemCreators.count(name))
-    {
-      _registeredItemCreators[name] = std::move(creator);
-      _categories.insert(category);
-      _registeredModelsCategory[name] = category;
-    }
+    registerModelImpl<ModelType>(std::move(creator), category);
   }
 
   template<typename ModelType>
   void registerModel(QString const &category = "Nodes")
   {
     RegistryItemCreator creator = [](){ return std::make_unique<ModelType>(); };
-    registerModel<ModelType>(std::move(creator), category);
+    registerModelImpl<ModelType>(std::move(creator), category);
   }
 
   template<typename ModelType>
   void registerModel(QString const &category,
                      RegistryItemCreator creator)
   {
-    registerModel<ModelType>(std::move(creator), category);
-  }
-
-  template <typename ModelCreator>
-  void registerModel(ModelCreator&& creator, QString const& category = "Nodes")
-  {
-    using ModelType = compute_model_type_t<decltype(creator())>;
-    registerModel<ModelType>(std::forward<ModelCreator>(creator), category);
-  }
-
-  template <typename ModelCreator>
-  void registerModel(QString const& category, ModelCreator&& creator)
-  {
-    registerModel(std::forward<ModelCreator>(creator), category);
+    registerModelImpl<ModelType>(std::move(creator), category);
   }
 
   void registerTypeConverter(TypeConverterId const & id,
-                             TypeConverter typeConverter)
+                             SharedTypeConverter typeConverter)
   {
-    _registeredTypeConverters[id] = std::move(typeConverter);
+    _registeredTypeConverters[id] = typeConverter;
   }
 
   std::unique_ptr<NodeDataModel>create(QString const &modelName);
@@ -107,7 +86,7 @@ public:
 
   CategoriesSet const &categories() const;
 
-  TypeConverter getTypeConverter(NodeDataType const & d1,
+  SharedTypeConverter getTypeConverter(NodeDataType const & d1,
                                  NodeDataType const & d2) const;
 
 private:
@@ -141,40 +120,32 @@ private:
       : std::true_type
   {};
 
-  template <typename ModelType>
-  static QString
-  computeName(std::true_type, RegistryItemCreator const&)
+  template<typename ModelType>
+  typename std::enable_if< HasStaticMethodName<ModelType>::value>::type
+  registerModelImpl(RegistryItemCreator creator, QString const &category )
   {
-    return ModelType::Name();
+    const QString name = ModelType::Name();
+    if (_registeredItemCreators.count(name) == 0)
+    {
+      _registeredItemCreators[name] = std::move(creator);
+      _categories.insert(category);
+      _registeredModelsCategory[name] = category;
+    }
   }
 
-  template <typename ModelType>
-  static QString
-  computeName(std::false_type, RegistryItemCreator const& creator)
+  template<typename ModelType>
+  typename std::enable_if< !HasStaticMethodName<ModelType>::value>::type
+  registerModelImpl(RegistryItemCreator creator, QString const &category )
   {
-    return creator()->name();
+	const QString name = creator()->name();
+    if (_registeredItemCreators.count(name) == 0)
+    {
+      _registeredItemCreators[name] = std::move(creator);
+      _categories.insert(category);
+      _registeredModelsCategory[name] = category;
+    }
   }
 
-  template <typename T>
-  struct UnwrapUniquePtr
-  {
-    // Assert always fires, but the compiler doesn't know this:
-    static_assert(!std::is_same<T, T>::value,
-                  "The ModelCreator must return a std::unique_ptr<T>, where T "
-                  "inherits from NodeDataModel");
-  };
-
-  template <typename T>
-  struct UnwrapUniquePtr<std::unique_ptr<T>>
-  {
-    static_assert(std::is_base_of<NodeDataModel, T>::value,
-                  "The ModelCreator must return a std::unique_ptr<T>, where T "
-                  "inherits from NodeDataModel");
-    using type = T;
-  };
-
-  template <typename CreatorResult>
-  using compute_model_type_t = typename UnwrapUniquePtr<CreatorResult>::type;
 };
 
 

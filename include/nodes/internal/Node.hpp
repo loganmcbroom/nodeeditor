@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <QtCore/QObject>
 #include <QtCore/QUuid>
 
@@ -37,7 +36,7 @@ public:
   Node(std::unique_ptr<NodeDataModel> && dataModel);
 
   virtual
-  ~Node();
+  ~Node() override;
 
 public:
 
@@ -85,12 +84,15 @@ public:
   NodeDataModel*
   nodeDataModel() const;
 
+  void
+  prodOnDataUpdated(PortIndex index, Connection * c);
+
 public Q_SLOTS: // data propagation
 
   /// Propagates incoming data to the underlying model.
   void
   propagateData(std::shared_ptr<NodeData> nodeData,
-                PortIndex inPortIndex) const;
+				PortIndex inPortIndex);
 
   /// Fetches data from model's OUT #index port
   /// and propagates it to the connection
@@ -100,6 +102,11 @@ public Q_SLOTS: // data propagation
   /// update the graphic part if the size of the embeddedwidget changes
   void
   onNodeSizeUpdated();
+
+
+  void
+  updateGraphics();
+
 
 private:
 
@@ -118,5 +125,36 @@ private:
   NodeGeometry _nodeGeometry;
 
   std::unique_ptr<NodeGraphicsObject> _nodeGraphicsObject;
+
 };
+
+class NodeAddCommand : public QUndoCommand
+{
+public:
+	NodeAddCommand( Node & node, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowScene & scene;
+	QUuid id;
+	QJsonObject nodeJson;
+	bool firstRun = true;
+};
+
+class NodeRemoveCommand : public QUndoCommand
+{
+public:
+	NodeRemoveCommand( Node & node, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowScene & scene;
+	QUuid id;
+	QJsonObject nodeJson;
+};
+
 }

@@ -2,6 +2,7 @@
 
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsObject>
+#include <QUndoCommand>
 
 #include "Connection.hpp"
 
@@ -27,7 +28,7 @@ public:
                      Node& node);
 
   virtual
-  ~NodeGraphicsObject();
+  ~NodeGraphicsObject() override;
 
   Node&
   node();
@@ -53,6 +54,9 @@ public:
 
   void
   lock(bool locked);
+
+  FlowScene &
+  getScene();
 
 protected:
   void
@@ -101,5 +105,25 @@ private:
 
   // either nullptr or owned by parent QGraphicsItem
   QGraphicsProxyWidget * _proxyWidget;
+
+  QPointF oldPos;
 };
+
+class NodeMoveCommand : public QUndoCommand
+{
+public:
+	NodeMoveCommand( NodeGraphicsObject & node, QPointF oldPos, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowScene & scene;
+	QUuid id;
+	QPointF oldPos;
+	QPointF newPos;
+};
+
 }
+
+

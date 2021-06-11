@@ -19,6 +19,7 @@ public:
 public:
 
   static void setConnectionStyle(QString jsonText);
+  static ConnectionStyle & style();
 
 private:
 

@@ -42,6 +42,11 @@ setStyle(QString jsonText)
   StyleCollection::setFlowViewStyle(style);
 }
 
+FlowViewStyle & FlowViewStyle::style()
+    {
+    return StyleCollection::flowViewStyle();
+    }
+
 
 #ifdef STYLE_DEBUG
   #define FLOW_VIEW_STYLE_CHECK_UNDEFINED_VALUE(v, variable) { \

@@ -25,6 +25,7 @@
 
 using QtNodes::FlowView;
 using QtNodes::FlowScene;
+using QtNodes::ViewChangeCommand;
 
 FlowView::
 FlowView(QWidget *parent)
@@ -35,10 +36,6 @@ FlowView(QWidget *parent)
 {
   setDragMode(QGraphicsView::ScrollHandDrag);
   setRenderHint(QPainter::Antialiasing);
-
-  auto const &flowViewStyle = StyleCollection::flowViewStyle();
-
-  setBackgroundBrush(flowViewStyle.BackgroundColor);
 
   //setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
   //setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
@@ -92,9 +89,30 @@ FlowView::setScene(FlowScene *scene)
 
   delete _deleteSelectionAction;
   _deleteSelectionAction = new QAction(QStringLiteral("Delete Selection"), this);
-  _deleteSelectionAction->setShortcut(Qt::Key_Delete);
+ // _deleteSelectionAction->setShortcut(Qt::Key_Delete);
   connect(_deleteSelectionAction, &QAction::triggered, this, &FlowView::deleteSelectedNodes);
   addAction(_deleteSelectionAction);
+
+  connect( _scene, &FlowScene::saving, this, [this]( QJsonObject & json )
+	{
+	QJsonObject j;
+
+	j["viewRectX"] = sceneRect().x();
+	j["viewRectY"] = sceneRect().y();
+	j["viewRectW"] = sceneRect().width();
+	j["viewRectH"] = sceneRect().height();
+
+	json["viewRect"] = j;
+	});
+  connect( _scene, &FlowScene::loading, this, [this]( const QJsonObject & json )
+	{
+	QJsonObject j = json["viewRect"].toObject();
+
+	setSceneRect( j["viewRectX"].toDouble(),
+				  j["viewRectY"].toDouble(),
+				  j["viewRectW"].toDouble(),
+				  j["viewRectH"].toDouble() );
+	});
 }
 
 
@@ -125,6 +143,7 @@ contextMenuEvent(QContextMenuEvent *event)
 
   //Add result treeview to the context menu
   auto *treeView = new QTreeWidget(&modelMenu);
+  treeView->setFixedHeight( 300 );
   treeView->header()->close();
 
   auto *treeViewAction = new QWidgetAction(&modelMenu);
@@ -149,7 +168,7 @@ contextMenuEvent(QContextMenuEvent *event)
     item->setData(0, Qt::UserRole, assoc.first);
   }
 
-  treeView->expandAll();
+  //treeView->expandAll();
 
   connect(treeView, &QTreeWidget::itemClicked, [&](QTreeWidgetItem *item, int)
   {
@@ -165,6 +184,7 @@ contextMenuEvent(QContextMenuEvent *event)
     if (type)
     {
       auto& node = _scene->createNode(std::move(type));
+	  _scene->undoStack->push( new NodeAddCommand( node ) );
 
       QPoint pos = event->pos();
 
@@ -208,6 +228,10 @@ void
 FlowView::
 wheelEvent(QWheelEvent *event)
 {
+  QGraphicsView::wheelEvent( event );
+  if( event->isAccepted() )
+	return;
+
   QPoint delta = event->angleDelta();
 
   if (delta.y() == 0)
@@ -256,13 +280,18 @@ void
 FlowView::
 deleteSelectedNodes()
 {
+  QUndoCommand * parentCommand = new QUndoCommand( "Deleted Selection" );
+
   // Delete the selected connections first, ensuring that they won't be
   // automatically deleted when selected nodes are deleted (deleting a node
   // deletes some connections as well)
   for (QGraphicsItem * item : _scene->selectedItems())
   {
     if (auto c = qgraphicsitem_cast<ConnectionGraphicsObject*>(item))
-      _scene->deleteConnection(c->connection());
+	  {
+	  new ConnectionRemoveCommand( c->connection(), parentCommand );
+	  _scene->deleteConnection(c->connection());
+	  }
   }
 
   // Delete the nodes; this will delete many of the connections.
@@ -272,8 +301,13 @@ deleteSelectedNodes()
   for (QGraphicsItem * item : _scene->selectedItems())
   {
     if (auto n = qgraphicsitem_cast<NodeGraphicsObject*>(item))
-      _scene->removeNode(n->node());
+	  {
+	  new NodeRemoveCommand( n->node(), parentCommand );
+	  //_scene->removeNode(n->node());
+	  }
   }
+
+  _scene->undoStack->push( parentCommand );
 }
 
 
@@ -286,6 +320,10 @@ keyPressEvent(QKeyEvent *event)
     case Qt::Key_Shift:
       setDragMode(QGraphicsView::RubberBandDrag);
       break;
+
+	case Qt::Key_Delete:
+	  _deleteSelectionAction->trigger();
+	  break;
 
     default:
       break;
@@ -321,6 +359,7 @@ mousePressEvent(QMouseEvent *event)
   {
     _clickPos = mapToScene(event->pos());
   }
+  previousRect = sceneRect();
 }
 
 
@@ -343,9 +382,18 @@ mouseMoveEvent(QMouseEvent *event)
 
 void
 FlowView::
+mouseReleaseEvent(QMouseEvent *event)
+{
+  if( sceneRect() != previousRect )
+	_scene->undoStack->push( new ViewChangeCommand( *this ) );
+  QGraphicsView::mouseReleaseEvent( event );
+}
+
+
+void
+FlowView::
 drawBackground(QPainter* painter, const QRectF& r)
 {
-  QGraphicsView::drawBackground(painter, r);
 
   auto drawGrid =
     [&](double gridStep)
@@ -357,7 +405,7 @@ drawBackground(QPainter* painter, const QRectF& r)
       double left   = std::floor(tl.x() / gridStep - 0.5);
       double right  = std::floor(br.x() / gridStep + 1.0);
       double bottom = std::floor(tl.y() / gridStep - 0.5);
-      double top    = std::floor (br.y() / gridStep + 1.0);
+      double top    = std::floor(br.y() / gridStep + 1.0);
 
       // vertical lines
       for (int xi = int(left); xi <= int(right); ++xi)
@@ -379,7 +427,8 @@ drawBackground(QPainter* painter, const QRectF& r)
 
   auto const &flowViewStyle = StyleCollection::flowViewStyle();
 
-  QBrush bBrush = backgroundBrush();
+  painter->setBrush( flowViewStyle.BackgroundColor );
+  QGraphicsView::drawBackground(painter, r);
 
   QPen pfine(flowViewStyle.FineGridColor, 1.0);
 
@@ -407,4 +456,28 @@ FlowView::
 scene()
 {
   return _scene;
+}
+
+
+
+ViewChangeCommand::ViewChangeCommand( FlowView & view, QUndoCommand * parent )
+	: QUndoCommand( QString("Viewport Changed"), parent )
+	, _view( view )
+	, _oldRect( view.previousRect )
+	, _newRect( view.sceneRect() )
+	{
+	}
+
+void
+ViewChangeCommand::
+undo()
+{
+  _view.setSceneRect( _oldRect );
+}
+
+void
+ViewChangeCommand::
+redo()
+{
+  _view.setSceneRect( _newRect );
 }

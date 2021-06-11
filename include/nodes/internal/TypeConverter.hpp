@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QObject>
+
 #include "NodeData.hpp"
 #include "memory.hpp"
 
@@ -8,11 +10,18 @@
 namespace QtNodes
 {
 
-using SharedNodeData = std::shared_ptr<NodeData>;
+class TypeConverter : public QObject
+{ Q_OBJECT
+public:
+	virtual void operator()( std::shared_ptr<NodeData> data ) = 0;
+    virtual std::shared_ptr<TypeConverter> createNew() = 0;
+	virtual void cancel() {} // Called when conversion should be stopped
 
-// a function taking in NodeData and returning NodeData
-using TypeConverter =
-  std::function<SharedNodeData(SharedNodeData)>;
+Q_SIGNALS:
+	void finished( std::shared_ptr<NodeData> );
+};
+
+using SharedTypeConverter = std::shared_ptr<TypeConverter>;
 
 // data-type-in, data-type-out
 using TypeConverterId =

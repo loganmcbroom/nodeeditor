@@ -5,7 +5,7 @@ using QtNodes::NodeStyle;
 using QtNodes::ConnectionStyle;
 using QtNodes::FlowViewStyle;
 
-NodeStyle const&
+NodeStyle &
 StyleCollection::
 nodeStyle()
 {
@@ -13,7 +13,7 @@ nodeStyle()
 }
 
 
-ConnectionStyle const&
+ConnectionStyle &
 StyleCollection::
 connectionStyle()
 {
@@ -21,7 +21,7 @@ connectionStyle()
 }
 
 
-FlowViewStyle const&
+FlowViewStyle &
 StyleCollection::
 flowViewStyle()
 {

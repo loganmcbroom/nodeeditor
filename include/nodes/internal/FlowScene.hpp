@@ -2,6 +2,7 @@
 
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsScene>
+#include <QUndoStack>
 
 #include <unordered_map>
 #include <tuple>
@@ -50,13 +51,17 @@ public:
                    PortIndex portIndexIn,
                    Node& nodeOut,
                    PortIndex portIndexOut,
-                   TypeConverter const & converter = TypeConverter{});
+				   SharedTypeConverter converter = nullptr,
+				   QUuid id = QUuid(),
+				   bool sendSignal = false);
 
-  std::shared_ptr<Connection> restoreConnection(QJsonObject const &connectionJson);
+  std::shared_ptr<Connection> restoreConnection(QJsonObject const &connectionJson, bool sendSignal = false);
 
-  void deleteConnection(Connection& connection);
+  void deleteConnection(Connection& connection, bool sendSignal = false);
 
   Node&createNode(std::unique_ptr<NodeDataModel> && dataModel);
+
+  Node & createNodeFromName( const QString & name, const QPointF & pos );
 
   Node&restoreNode(QJsonObject const& nodeJson);
 
@@ -92,13 +97,19 @@ public:
 
   void clearScene();
 
-  void save() const;
+  bool save( QString filename ) const;
 
-  void load();
+  bool load( const QString & filename );
 
   QByteArray saveToMemory() const;
 
   void loadFromMemory(const QByteArray& data);
+
+public:
+
+  // xloom note: This object doesn't own the undo stack, but I need to inject a pointer to my undo stack
+  // that is accessible from many objects within the flow scene. This is that injection.
+  QUndoStack * undoStack = nullptr;
 
 Q_SIGNALS:
 
@@ -134,19 +145,20 @@ Q_SIGNALS:
 
   void nodeContextMenu(Node& n, const QPointF& pos);
 
+  void saving( QJsonObject & json ) const;
+
+  void loading( const QJsonObject & json );
+
 private:
 
   using SharedConnection = std::shared_ptr<Connection>;
   using UniqueNode       = std::unique_ptr<Node>;
 
-  // DO NOT reorder this member to go after the others.
-  // This should outlive all the connections and nodes of
-  // the graph, so that nodes can potentially have pointers into it,
-  // which is why it comes first in the class.
-  std::shared_ptr<DataModelRegistry> _registry;
-
   std::unordered_map<QUuid, SharedConnection> _connections;
   std::unordered_map<QUuid, UniqueNode>       _nodes;
+  std::shared_ptr<DataModelRegistry>          _registry;
+
+  mutable bool _savingOrLoading;
 
 private Q_SLOTS:
 

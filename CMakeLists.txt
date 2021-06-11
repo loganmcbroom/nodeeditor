@@ -6,35 +6,9 @@ project(NodeEditor CXX)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_DISABLE_SOURCE_CHANGES  ON)
 
-get_directory_property(_has_parent PARENT_DIRECTORY)
-if(_has_parent)
-  set(is_root_project OFF)
-else()
-  set(is_root_project ON)
-endif()
-
-set(NE_DEVELOPER_DEFAULTS "${is_root_project}" CACHE BOOL "Turns on default settings for development of NodeEditor")
-
-option(BUILD_TESTING "Build tests" "${NE_DEVELOPER_DEFAULTS}")
-option(BUILD_EXAMPLES "Build Examples" "${NE_DEVELOPER_DEFAULTS}")
-option(BUILD_SHARED_LIBS "Build as shared library" ON)
-option(BUILD_DEBUG_POSTFIX_D "Append d suffix to debug libraries" OFF)
 option(NE_FORCE_TEST_COLOR "Force colorized unit test output" OFF)
 
 enable_testing()
-
-if(NE_DEVELOPER_DEFAULTS)
-  set(CMAKE_CXX_STANDARD 14)
-  set(CMAKE_CXX_EXTENSIONS OFF)
-
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
-endif()
-
-if(BUILD_DEBUG_POSTFIX_D)
-  set(CMAKE_DEBUG_POSTFIX d)
-endif()
 
 add_subdirectory(external)
 
@@ -43,7 +17,8 @@ find_package(Qt5 5.3 COMPONENTS
              Core
              Widgets
              Gui
-             OpenGL)
+			 OpenGL
+			 Concurrent)
 
 qt5_add_resources(RESOURCES ./resources/resources.qrc)
 
@@ -75,8 +50,6 @@ set(CPP_SOURCE_FILES
   src/StyleCollection.cpp
 )
 
-# If we want to give the option to build a static library,
-# set BUILD_SHARED_LIBS option to OFF
 add_library(nodes
   ${CPP_SOURCE_FILES}
   ${RESOURCES}
@@ -98,12 +71,13 @@ target_link_libraries(nodes
     Qt5::Widgets
     Qt5::Gui
     Qt5::OpenGL
+	Qt5::Concurrent
 )
 
 target_compile_definitions(nodes
   PUBLIC
     ${Qt5Widgets_DEFINITIONS}
-    NODE_EDITOR_SHARED
+	NODE_EDITOR_STATIC
   PRIVATE
     NODE_EDITOR_EXPORTS
     #NODE_DEBUG_DRAWING
@@ -112,7 +86,7 @@ target_compile_definitions(nodes
 
 target_compile_options(nodes
   PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /wd4127 /EHsc>
+    $<$<CXX_COMPILER_ID:MSVC>:/W3 /wd4127 /EHsc>
     $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra>
     $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra>
 )
@@ -126,7 +100,6 @@ set_target_properties(nodes
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 ######
@@ -147,17 +120,7 @@ target_sources(nodes PRIVATE ${nodes_moc})
 # Examples
 ##
 
-if(BUILD_EXAMPLES)
-  add_subdirectory(examples)
-endif()
-
-##################
-# Automated Tests
-##
-
-if(BUILD_TESTING)
-  add_subdirectory(test)
-endif()
+#add_subdirectory(examples)
 
 ###############
 # Installation

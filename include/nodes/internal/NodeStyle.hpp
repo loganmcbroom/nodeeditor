@@ -19,6 +19,7 @@ public:
 public:
 
   static void setNodeStyle(QString jsonText);
+  static NodeStyle & style();
 
 private:
 

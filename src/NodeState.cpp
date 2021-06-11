@@ -136,3 +136,11 @@ resizing() const
 {
   return _resizing;
 }
+
+void
+NodeState::
+updateNumPorts( size_t in, size_t out )
+{
+  _inConnections.resize( in );
+  _outConnections.resize( out );
+}

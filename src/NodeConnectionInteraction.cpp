@@ -6,15 +6,7 @@
 #include "DataModelRegistry.hpp"
 #include "FlowScene.hpp"
 
-using QtNodes::NodeConnectionInteraction;
-using QtNodes::PortType;
-using QtNodes::PortIndex;
-using QtNodes::FlowScene;
-using QtNodes::Node;
-using QtNodes::Connection;
-using QtNodes::NodeDataModel;
-using QtNodes::TypeConverter;
-
+using namespace QtNodes;
 
 NodeConnectionInteraction::
 NodeConnectionInteraction(Node& node, Connection& connection, FlowScene& scene)
@@ -26,7 +18,7 @@ NodeConnectionInteraction(Node& node, Connection& connection, FlowScene& scene)
 
 bool
 NodeConnectionInteraction::
-canConnect(PortIndex &portIndex, TypeConverter & converter) const
+canConnect(PortIndex &portIndex, SharedTypeConverter & converter) const
 {
   // 1) Connection requires a port
 
@@ -38,11 +30,11 @@ canConnect(PortIndex &portIndex, TypeConverter & converter) const
     return false;
   }
 
-  // 1.5) Forbid connecting the node to itself
-  Node* node = _connection->getNode(oppositePort(requiredPort));
+  // 1.5) Forbid connecting the node to itself - xcdp says why not
+  //Node* node = _connection->getNode(oppositePort(requiredPort));
 
-  if (node == _node)
-    return false;
+  //if (node == _node)
+  //  return false;
 
   // 2) connection point is on top of the node port
 
@@ -81,13 +73,13 @@ canConnect(PortIndex &portIndex, TypeConverter & converter) const
       converter = _scene->registry().getTypeConverter(candidateNodeDataType , connectionDataType);
     }
 
-    return (converter != nullptr);
+    return (converter.get() != nullptr);
   }
 
   return true;
 }
 
-
+// This is only called when the mouse releases a connection onto a nade
 bool
 NodeConnectionInteraction::
 tryConnect() const
@@ -95,7 +87,7 @@ tryConnect() const
   // 1) Check conditions from 'canConnect'
   PortIndex portIndex = INVALID;
 
-  TypeConverter converter;
+  SharedTypeConverter converter;
 
   if (!canConnect(portIndex, converter))
   {
@@ -120,17 +112,20 @@ tryConnect() const
   _connection->setNodeToPort(*_node, requiredPort, portIndex);
 
   // 4) Adjust Connection geometry
-
   _node->nodeGraphicsObject().moveConnections();
 
-  // 5) Poke model to intiate data transfer
+  _connection->getNode( PortType::In  )->nodeDataModel()->inputConnectionCreated(  _connection->getPortIndex( PortType::In  ) );
+  _connection->getNode( PortType::Out )->nodeDataModel()->outputConnectionCreated( _connection->getPortIndex( PortType::Out ) );
 
+  // 5) Poke model to intiate data transfer
   auto outNode = _connection->getNode(PortType::Out);
   if (outNode)
   {
     PortIndex outPortIndex = _connection->getPortIndex(PortType::Out);
-    outNode->onDataUpdated(outPortIndex);
+	outNode->prodOnDataUpdated(outPortIndex, _connection);
   }
+
+  _scene->undoStack->push( new ConnectionAddCommand( *_connection ) );
 
   return true;
 }
@@ -139,6 +134,7 @@ tryConnect() const
 /// 1) Node and Connection should be already connected
 /// 2) If so, clear Connection entry in the NodeState
 /// 3) Set Connection end to 'requiring a port'
+// This is only called when the mouse starts dragging a connection
 bool
 NodeConnectionInteraction::
 disconnect(PortType portToDisconnect) const
@@ -154,12 +150,17 @@ disconnect(PortType portToDisconnect) const
   // 4) Propagate invalid data to IN node
   _connection->propagateEmptyData();
 
+  _connection->getNode( PortType::In  )->nodeDataModel()->inputConnectionDeleted(  _connection->getPortIndex( PortType::In  ) );
+  _connection->getNode( PortType::Out )->nodeDataModel()->outputConnectionDeleted( _connection->getPortIndex( PortType::Out ) );
+
   // clear Connection side
   _connection->clearNode(portToDisconnect);
 
   _connection->setRequiredPort(portToDisconnect);
 
   _connection->getConnectionGraphicsObject().grabMouse();
+
+  _connection->setTypeConverter( nullptr );
 
   return true;
 }

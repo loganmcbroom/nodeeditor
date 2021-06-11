@@ -47,7 +47,7 @@ categories() const
 }
 
 
-TypeConverter
+QtNodes::SharedTypeConverter
 DataModelRegistry::
 getTypeConverter(NodeDataType const & d1,
                  NodeDataType const & d2) const
@@ -58,8 +58,8 @@ getTypeConverter(NodeDataType const & d1,
 
   if (it != _registeredTypeConverters.end())
   {
-    return it->second;
+    return it->second->createNew();
   }
 
-  return TypeConverter{};
+  return nullptr;
 }

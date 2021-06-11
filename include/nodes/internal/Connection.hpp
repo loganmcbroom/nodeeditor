@@ -3,6 +3,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QUuid>
 #include <QtCore/QVariant>
+#include <QUndoCommand>
 
 #include "PortType.hpp"
 #include "NodeData.hpp"
@@ -23,6 +24,7 @@ namespace QtNodes
 class Node;
 class NodeData;
 class ConnectionGraphicsObject;
+class FlowScene;
 
 ///
 class NODE_EDITOR_PUBLIC Connection
@@ -38,20 +40,20 @@ public:
   /// The port has parameters (portType, portIndex).
   /// The opposite connection end will require anothre port.
   Connection(PortType portType,
-             Node& node,
-             PortIndex portIndex);
+			 Node& node,
+			 PortIndex portIndex);
 
   Connection(Node& nodeIn,
              PortIndex portIndexIn,
              Node& nodeOut,
              PortIndex portIndexOut,
-             TypeConverter converter =
-               TypeConverter{});
+			 SharedTypeConverter converter = nullptr,
+			 QUuid id = QUuid() );
 
   Connection(const Connection&) = delete;
   Connection operator=(const Connection&) = delete;
 
-  ~Connection();
+  ~Connection() override;
 
 public:
 
@@ -78,8 +80,8 @@ public:
   /// It is assumed that there is a required port, no extra checks
   void
   setNodeToPort(Node& node,
-                PortType portType,
-                PortIndex portIndex);
+				PortType portType,
+				PortIndex portIndex);
 
   void
   removeFromNodes() const;
@@ -115,8 +117,11 @@ public:
   NodeDataType
   dataType(PortType portType) const;
 
+  SharedTypeConverter
+  getTypeConverter();
+
   void
-  setTypeConverter(TypeConverter converter);
+  setTypeConverter(SharedTypeConverter converter);
 
   bool
   complete() const;
@@ -124,7 +129,10 @@ public:
 public: // data propagation
 
   void
-  propagateData(std::shared_ptr<NodeData> nodeData) const;
+  setInData(std::shared_ptr<NodeData> nodeData) const;
+
+  void
+  propagateData( std::shared_ptr<NodeData> nodeData ) const;
 
   void
   propagateEmptyData() const;
@@ -138,6 +146,8 @@ Q_SIGNALS:
   connectionMadeIncomplete(Connection const&) const;
 
 private:
+
+  void commandSetup();
 
   QUuid _uid;
 
@@ -156,11 +166,47 @@ private:
 
   std::unique_ptr<ConnectionGraphicsObject>_connectionGraphicsObject;
 
-  TypeConverter _converter;
+  SharedTypeConverter _converter;
+
+private:
 
 Q_SIGNALS:
 
   void
   updated(Connection& conn) const;
 };
+
+
+/*
+ * Commands
+ */
+
+class ConnectionAddCommand : public QUndoCommand
+{
+public:
+	ConnectionAddCommand( Connection & c, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowScene & scene;
+	QJsonObject connectionJson; //Stores everything needed to reconstruct
+	bool firstRun = true;
+};
+
+class ConnectionRemoveCommand : public QUndoCommand
+{
+public:
+	ConnectionRemoveCommand( Connection & c, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowScene & scene;
+	QJsonObject connectionJson; //Stores everything needed to reconstruct
+	bool firstRun = true;
+};
+
 }

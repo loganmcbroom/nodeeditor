@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtWidgets/QGraphicsView>
+#include <QUndoCommand>
 
 #include "Export.hpp"
 
@@ -14,6 +15,8 @@ class NODE_EDITOR_PUBLIC FlowView
 {
   Q_OBJECT
 public:
+
+  friend class ViewChangeCommand;
 
   FlowView(QWidget *parent = Q_NULLPTR);
   FlowView(FlowScene *scene, QWidget *parent = Q_NULLPTR);
@@ -49,6 +52,8 @@ protected:
 
   void mouseMoveEvent(QMouseEvent *event) override;
 
+  void mouseReleaseEvent(QMouseEvent *event) override;
+
   void drawBackground(QPainter* painter, const QRectF& r) override;
 
   void showEvent(QShowEvent *event) override;
@@ -65,5 +70,21 @@ private:
   QPointF _clickPos;
 
   FlowScene* _scene;
+
+  QRectF previousRect;
 };
+
+class ViewChangeCommand : public QUndoCommand
+{
+public:
+	ViewChangeCommand( FlowView & view, QUndoCommand * parent = nullptr );
+
+	void undo() override;
+	void redo() override;
+
+private:
+	FlowView & _view;
+	QRectF _oldRect, _newRect;
+};
+
 }

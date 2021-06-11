@@ -17,6 +17,8 @@ using QtNodes::PortIndex;
 using QtNodes::PortType;
 using QtNodes::Node;
 
+static const size_t embeddedWidgetPaddingX = 20;
+
 NodeGeometry::
 NodeGeometry(std::unique_ptr<NodeDataModel> const &dataModel)
   : _width(100)
@@ -69,7 +71,7 @@ boundingRect() const
 {
   auto const &nodeStyle = StyleCollection::nodeStyle();
 
-  double addon = 4 * nodeStyle.ConnectionPointDiameter;
+  double addon = 2 * nodeStyle.ConnectionPointDiameter;
 
   return QRectF(0 - addon,
                 0 - addon,
@@ -85,7 +87,7 @@ recalculateSize() const
   _entryHeight = _fontMetrics.height();
 
   {
-    unsigned int maxNumOfEntries = std::max(_nSinks, _nSources);
+	unsigned int maxNumOfEntries = std::max(nSinks(), nSources());
     unsigned int step = _entryHeight + _spacing;
     _height = step * maxNumOfEntries;
   }
@@ -102,7 +104,8 @@ recalculateSize() const
 
   _width = _inputPortWidth +
            _outputPortWidth +
-           2 * _spacing;
+		   2 * embeddedWidgetPaddingX;
+		   //2 * _spacing;
 
   if (auto w = _dataModel->embeddedWidget())
   {
@@ -244,18 +247,23 @@ widgetPosition() const
     if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag)
     {
       // If the widget wants to use as much vertical space as possible, place it immediately after the caption.
-      return QPointF(_spacing + portWidth(PortType::In), captionHeight());
+	  //return QPointF(_spacing + portWidth(PortType::In), captionHeight());
+	  return QPointF(embeddedWidgetPaddingX + portWidth(PortType::In), captionHeight());
     }
     else
     {
       if (_dataModel->validationState() != NodeValidationState::Valid)
       {
-        return QPointF(_spacing + portWidth(PortType::In),
-                      (captionHeight() + _height - validationHeight() - _spacing - w->height()) / 2.0);
+		//return QPointF(_spacing + portWidth(PortType::In),
+		//              (captionHeight() + _height - validationHeight() - _spacing - w->height()) / 2.0);
+		return QPointF(embeddedWidgetPaddingX + portWidth(PortType::In),
+					  (captionHeight() + _height - validationHeight() - _spacing - w->height()) / 2.0);
       }
 
-      return QPointF(_spacing + portWidth(PortType::In), 
-                    (captionHeight() + _height - w->height()) / 2.0);
+	  //return QPointF(_spacing + portWidth(PortType::In),
+	  //              (captionHeight() + _height - w->height()) / 2.0);
+	  return QPointF(embeddedWidgetPaddingX + portWidth(PortType::In),
+					(captionHeight() + _height - w->height()) / 2.0);
     }
   }
   return QPointF();

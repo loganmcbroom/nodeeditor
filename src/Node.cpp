@@ -22,9 +22,12 @@ using QtNodes::NodeDataModel;
 using QtNodes::NodeGraphicsObject;
 using QtNodes::PortIndex;
 using QtNodes::PortType;
+using QtNodes::NodeAddCommand;
+using QtNodes::NodeRemoveCommand;
+
 
 Node::
-Node(std::unique_ptr<NodeDataModel> && dataModel)
+Node(std::unique_ptr<NodeDataModel> && dataModel )
   : _uid(QUuid::createUuid())
   , _nodeDataModel(std::move(dataModel))
   , _nodeState(_nodeDataModel)
@@ -38,7 +41,15 @@ Node(std::unique_ptr<NodeDataModel> && dataModel)
           this, &Node::onDataUpdated);
 
   connect(_nodeDataModel.get(), &NodeDataModel::embeddedWidgetSizeUpdated,
-          this, &Node::onNodeSizeUpdated );
+		  this, &Node::onNodeSizeUpdated);
+
+  connect(_nodeDataModel.get(), &NodeDataModel::graphicsUpdateRequested,
+		  this, &Node::updateGraphics);
+
+  connect(_nodeDataModel.get(), &NodeDataModel::nPortsChanged,
+		  this, &Node::updateGraphics);
+
+  nodeDataModel()->parent = this;
 }
 
 
@@ -185,15 +196,11 @@ nodeDataModel() const
 void
 Node::
 propagateData(std::shared_ptr<NodeData> nodeData,
-              PortIndex inPortIndex) const
+			  PortIndex inPortIndex)
 {
   _nodeDataModel->setInData(std::move(nodeData), inPortIndex);
 
-  //Recalculate the nodes visuals. A data change can result in the node taking more space than before, so this forces a recalculate+repaint on the affected node
-  _nodeGraphicsObject->setGeometryChanged();
-  _nodeGeometry.recalculateSize();
-  _nodeGraphicsObject->update();
-  _nodeGraphicsObject->moveConnections();
+  updateGraphics();
 }
 
 
@@ -207,7 +214,24 @@ onDataUpdated(PortIndex index)
     _nodeState.connections(PortType::Out, index);
 
   for (auto const & c : connections)
-    c.second->propagateData(nodeData);
+	c.second->setInData(nodeData);
+}
+
+void
+Node::
+prodOnDataUpdated(PortIndex index, Connection * con)
+{
+  auto nodeData = _nodeDataModel->outData(index);
+
+  auto connections =
+	_nodeState.connections(PortType::Out, index);
+
+  for (auto const & c : connections)
+	if( con == c.second )
+	  {
+		c.second->setInData(nodeData);
+		break;
+	  }
 }
 
 void
@@ -231,3 +255,72 @@ onNodeSizeUpdated()
         }
     }
 }
+
+void
+Node::
+updateGraphics()
+{
+  //Check how many ports are wanted
+  _nodeState.updateNumPorts( nodeDataModel()->nPorts( PortType::In ), nodeDataModel()->nPorts( PortType::Out ) );
+
+  //Recalculate the nodes visuals. A data change can result in the node taking more space than before, so this forces a recalculate+repaint on the affected node
+  _nodeGraphicsObject->setGeometryChanged();
+  _nodeGeometry.recalculateSize();
+  _nodeGraphicsObject->update();
+  _nodeGraphicsObject->moveConnections();
+}
+
+NodeAddCommand::NodeAddCommand( Node & node, QUndoCommand * parent )
+	: QUndoCommand( "Node Added", parent )
+	, scene( node.nodeGraphicsObject().getScene() )
+	, id( node.id() )
+	, nodeJson( ) // Saving is done at undo time
+	{
+	}
+
+void NodeAddCommand::undo()
+	{
+	nodeJson = scene.nodes().at( id )->save();
+	scene.removeNode( *scene.nodes().at( id ) );
+	}
+
+void NodeAddCommand::redo()
+	{
+	if( firstRun )
+		firstRun = false;
+	else
+		scene.restoreNode( nodeJson );
+	}
+
+NodeRemoveCommand::NodeRemoveCommand( Node & node, QUndoCommand * parent )
+	: QUndoCommand( "Node Removed", parent )
+	, scene( node.nodeGraphicsObject().getScene() )
+	, id( node.id() )
+	, nodeJson( )
+	{
+	for(auto portType: {PortType::In,PortType::Out})
+		{
+		auto nodeState = node.nodeState();
+		auto const & nodeEntries = nodeState.getEntries(portType);
+
+		for (auto &connections : nodeEntries)
+			for (auto const &pair : connections)
+				new ConnectionRemoveCommand( *pair.second, this );
+		}
+	}
+
+void NodeRemoveCommand::undo()
+	{
+	scene.restoreNode( nodeJson );
+
+	QUndoCommand::undo();
+	}
+
+void NodeRemoveCommand::redo()
+	{
+	QUndoCommand::redo();
+
+	nodeJson = scene.nodes().at( id )->save();
+	scene.removeNode( *scene.nodes().at( id ) );
+	}
+

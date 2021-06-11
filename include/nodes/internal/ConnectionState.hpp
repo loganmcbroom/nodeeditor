@@ -11,14 +11,14 @@ namespace QtNodes
 
 class Node;
 
-/// Stores currently draggind end.
+/// Stores currently dragging end.
 /// Remembers last hovered Node.
 class ConnectionState
 {
 public:
 
   ConnectionState(PortType port = PortType::None)
-    : _requiredPort(port)
+	: _requiredPort(port)
   {}
 
   ConnectionState(const ConnectionState&) = delete;
@@ -57,5 +57,6 @@ private:
   PortType _requiredPort;
 
   Node* _lastHoveredNode{nullptr};
+
 };
 }

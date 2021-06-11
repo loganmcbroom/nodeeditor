@@ -107,7 +107,7 @@ public:
 
 public:
 
-  // xloom note: This object doesn't own the undo stack, but I need to inject a pointer to my undo stack
+  // Loton note: This object doesn't own the undo stack, but I need to inject a pointer to my undo stack
   // that is accessible from many objects within the flow scene. This is that injection.
   QUndoStack * undoStack = nullptr;
 

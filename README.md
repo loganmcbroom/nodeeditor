@@ -1,3 +1,7 @@
+### Fork info
+
+This is a heavily modified copy for use with Loton here: https://github.com/loganmcbroom/Loton
+
 ### Purpose
 
 **NodeEditor** is conceived as a general-purpose Qt-based library aimed at

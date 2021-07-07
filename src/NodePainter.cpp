@@ -178,11 +178,16 @@ drawConnectionPoints(QPainter* painter,
         painter->setBrush(nodeStyle.ConnectionPointColor);
       }
 
-      painter->drawEllipse(p,
-                           reducedDiameter * r,
-                           reducedDiameter * r);
+//	  painter->drawEllipse(p,
+//                           reducedDiameter * r,
+//                           reducedDiameter * r);
+	  if( portType == PortType::In && model->portRequired( i ) )
+		painter->drawRect( QRectF( p.rx() - reducedDiameter * r, p.ry() - reducedDiameter * r,
+			reducedDiameter * r * 2, reducedDiameter * r * 2 ) );
+	  else
+		painter->drawEllipse(p, reducedDiameter * r, reducedDiameter * r);
     }
-  };
+  }
 }
 
 
@@ -222,9 +227,14 @@ drawFilledConnectionPoints(QPainter * painter,
           painter->setBrush(nodeStyle.FilledConnectionPointColor);
         }
 
-        painter->drawEllipse(p,
-                             diameter * 0.4,
-                             diameter * 0.4);
+//		painter->drawEllipse(p,
+//							 diameter * 0.4,
+//							 diameter * 0.4);
+		if( portType == PortType::In && model->portRequired( i ) )
+		  painter->drawRect( QRectF( p.rx() - diameter * 0.4, p.ry() - diameter * 0.4,
+			diameter * 0.4 * 2, diameter * 0.4 * 2 ) );
+		else
+		  painter->drawEllipse( p, diameter * 0.4, diameter * 0.4 );
       }
     }
   }

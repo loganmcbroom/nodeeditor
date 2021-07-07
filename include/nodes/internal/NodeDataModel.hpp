@@ -57,6 +57,10 @@ public:
   virtual bool
   portCaptionVisible(PortType, PortIndex) const { return false; }
 
+  /// Loton addition for indicating what ports must be connected for processing to occur
+  virtual bool
+  portRequired( PortIndex ) const = 0;
+
   /// Name makes this model unique
   virtual QString
   name() const = 0;

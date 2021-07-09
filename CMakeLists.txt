@@ -104,9 +104,9 @@ set_target_properties(nodes
     )
 
 # Copy lib to top level /lib folder
-IF( CMAKE_BUILD_TYPE MATCHES Release )
-    configure_file( ${CMAKE_BINARY_DIR}/lib/nodes.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodes.lib COPYONLY )
-ENDIF( CMAKE_BUILD_TYPE MATCHES Release )
-IF( CMAKE_BUILD_TYPE MATCHES Debug )
-    configure_file( ${CMAKE_BINARY_DIR}/lib/nodesd.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodesd.lib COPYONLY )
-ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
+if( CMAKE_BUILD_TYPE STREQUAL "Release" )
+    add_custom_command( TARGET nodes POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:nodes> ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodes.lib )
+endif()
+if( CMAKE_BUILD_TYPE STREQUAL "Debug" )
+    add_custom_command( TARGET nodes POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:nodes> ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodesd.lib )
+endif()

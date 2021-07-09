@@ -1,60 +1,87 @@
 cmake_minimum_required(VERSION 3.2)
-# version 3.4 is required as other do not work with C++14 and clang
 
 project(NodeEditor CXX)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-set(CMAKE_DISABLE_SOURCE_CHANGES  ON)
-
-option(NE_FORCE_TEST_COLOR "Force colorized unit test output" OFF)
-
-enable_testing()
-
-add_subdirectory(external)
+set(CMAKE_DEBUG_POSTFIX d)
 
 # Find the QtWidgets library
 find_package(Qt5 5.3 COMPONENTS
-             Core
-             Widgets
-             Gui
-			 OpenGL
-			 Concurrent)
+    Core
+    Widgets
+    Gui
+	OpenGL
+	Concurrent
+    )
 
-qt5_add_resources(RESOURCES ./resources/resources.qrc)
-
-# Unfortunately, as we have a split include/src, AUTOMOC doesn't work.
-# We'll have to manually specify some files
 set(CMAKE_AUTOMOC ON)
 
-set(CPP_SOURCE_FILES
-  src/Connection.cpp
-  src/ConnectionBlurEffect.cpp
-  src/ConnectionGeometry.cpp
-  src/ConnectionGraphicsObject.cpp
-  src/ConnectionPainter.cpp
-  src/ConnectionState.cpp
-  src/ConnectionStyle.cpp
-  src/DataModelRegistry.cpp
-  src/FlowScene.cpp
-  src/FlowView.cpp
-  src/FlowViewStyle.cpp
-  src/Node.cpp
-  src/NodeConnectionInteraction.cpp
-  src/NodeDataModel.cpp
-  src/NodeGeometry.cpp
-  src/NodeGraphicsObject.cpp
-  src/NodePainter.cpp
-  src/NodeState.cpp
-  src/NodeStyle.cpp
-  src/Properties.cpp
-  src/StyleCollection.cpp
-)
+add_library( nodes
+    include/nodes/internal/Compiler.hpp
+    include/nodes/internal/Connection.hpp
+    include/nodes/internal/ConnectionGeometry.hpp
+    include/nodes/internal/ConnectionGraphicsObject.hpp
+    include/nodes/internal/ConnectionState.hpp
+    include/nodes/internal/ConnectionStyle.hpp
+    include/nodes/internal/DataModelRegistry.hpp
+    include/nodes/internal/Export.hpp
+    include/nodes/internal/FlowScene.hpp
+    include/nodes/internal/FlowView.hpp
+    include/nodes/internal/FlowViewStyle.hpp
+    include/nodes/internal/memory.hpp
+    include/nodes/internal/Node.hpp
+    include/nodes/internal/NodeData.hpp
+    include/nodes/internal/NodeDataModel.hpp
+    include/nodes/internal/NodeGeometry.hpp
+    include/nodes/internal/NodeGraphicsObject.hpp
+    include/nodes/internal/NodePainterDelegate.hpp
+    include/nodes/internal/NodeState.hpp
+    include/nodes/internal/NodeStyle.hpp
+    include/nodes/internal/OperatingSystem.hpp
+    include/nodes/internal/PortType.hpp
+    include/nodes/internal/QStringStdHash.hpp
+    include/nodes/internal/QUuidStdHash.hpp
+    include/nodes/internal/Serializable.hpp
+    include/nodes/internal/Style.hpp
+    include/nodes/internal/StyleCollection.hpp
+    include/nodes/internal/TypeConverter.hpp
 
-add_library(nodes
-  ${CPP_SOURCE_FILES}
-  ${RESOURCES}
-)
-add_library(NodeEditor::nodes ALIAS nodes)
+    src/Connection.cpp
+    src/ConnectionBlurEffect.cpp
+    src/ConnectionGeometry.cpp
+    src/ConnectionGraphicsObject.cpp
+    src/ConnectionPainter.cpp
+    src/ConnectionState.cpp
+    src/ConnectionStyle.cpp
+    src/DataModelRegistry.cpp
+    src/FlowScene.cpp
+    src/FlowView.cpp
+    src/FlowViewStyle.cpp
+    src/Node.cpp
+    src/NodeConnectionInteraction.cpp
+    src/NodeDataModel.cpp
+    src/NodeGeometry.cpp
+    src/NodeGraphicsObject.cpp
+    src/NodePainter.cpp
+    src/NodeState.cpp
+    src/NodeStyle.cpp
+    src/Properties.cpp
+    src/StyleCollection.cpp
+
+    resources/convert.png
+    resources/DefaultStyle.json
+    )
+add_library(NodeEditor::NodeEditor ALIAS nodes)
+
+target_link_libraries(nodes PUBLIC
+    Qt5::Core
+    Qt5::Widgets
+    Qt5::Gui
+    Qt5::OpenGL
+	Qt5::Concurrent
+    )
 
 target_include_directories(nodes
   PUBLIC
@@ -63,95 +90,23 @@ target_include_directories(nodes
   PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nodes/internal>
-)
-
-target_link_libraries(nodes
-  PUBLIC
-    Qt5::Core
-    Qt5::Widgets
-    Qt5::Gui
-    Qt5::OpenGL
-	Qt5::Concurrent
-)
+    )
 
 target_compile_definitions(nodes
   PUBLIC
-    ${Qt5Widgets_DEFINITIONS}
 	NODE_EDITOR_STATIC
-  PRIVATE
-    NODE_EDITOR_EXPORTS
-    #NODE_DEBUG_DRAWING
-    QT_NO_KEYWORDS
-)
-
-target_compile_options(nodes
-  PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W3 /wd4127 /EHsc>
-    $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra>
-    $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra>
-)
-
-target_compile_features(nodes
-  PUBLIC
-    cxx_generic_lambdas # Require C++14
-)
+    )
 
 set_target_properties(nodes
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-)
+    )
 
-######
-# Moc
-##
-
-file(GLOB_RECURSE HEADERS_TO_MOC include/nodes/internal/*.hpp)
-
-qt5_wrap_cpp(nodes_moc
-    ${HEADERS_TO_MOC}
-  TARGET nodes
-  OPTIONS --no-notes # Don't display a note for the headers which don't produce a moc_*.cpp
-)
-
-target_sources(nodes PRIVATE ${nodes_moc})
-
-###########
-# Examples
-##
-
-#add_subdirectory(examples)
-
-###############
-# Installation
-##
-
-include(GNUInstallDirs)
-
-set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/NodeEditor)
-
-install(TARGETS nodes
-  EXPORT NodeEditorTargets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-install(EXPORT NodeEditorTargets
-  FILE NodeEditorTargets.cmake
-  NAMESPACE NodeEditor::
-  DESTINATION ${INSTALL_CONFIGDIR}
-)
-
-include(CMakePackageConfigHelpers)
-
-configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/NodeEditorConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfig.cmake
-  INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
-)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfig.cmake
-  DESTINATION ${INSTALL_CONFIGDIR}
-)
+# Copy lib to top level /lib folder
+IF( CMAKE_BUILD_TYPE MATCHES Release )
+    configure_file( ${CMAKE_BINARY_DIR}/lib/nodes.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodes.lib COPYONLY )
+ENDIF( CMAKE_BUILD_TYPE MATCHES Release )
+IF( CMAKE_BUILD_TYPE MATCHES Debug )
+    configure_file( ${CMAKE_BINARY_DIR}/lib/nodesd.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodesd.lib COPYONLY )
+ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)

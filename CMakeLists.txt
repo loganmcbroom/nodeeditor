@@ -17,6 +17,7 @@ find_package(Qt5 5.3 COMPONENTS
     )
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
 add_library( nodes
     include/nodes/internal/Compiler.hpp
@@ -70,8 +71,9 @@ add_library( nodes
     src/Properties.cpp
     src/StyleCollection.cpp
 
-    resources/convert.png
-    resources/DefaultStyle.json
+    resources/NodeEditor.qrc
+    #resources/convert.png
+    #resources/DefaultStyle.json
     )
 add_library(NodeEditor::NodeEditor ALIAS nodes)
 

@@ -1,17 +1,18 @@
-get_filename_component(NodeEditor_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+@PACKAGE_INIT@
 
-include(CMakeFindDependencyMacro)
-
-# NOTE Had to use find_package because find_dependency does not support COMPONENTS or MODULE until 3.8.0
-
-find_package(Qt5 REQUIRED COMPONENTS
-             Core
-             Widgets
-             Gui
-             OpenGL)
-
-if(NOT TARGET NodeEditor::nodes)
+# If we aren't currently building the library, include targets
+if( NOT TARGET NodeEditor::nodes )
     include("${NodeEditor_CMAKE_DIR}/NodeEditorTargets.cmake")
 endif()
 
-set(NodeEditor_LIBRARIES NodeEditor::nodes)
+include( CMakeFindDependencyMacro )
+
+list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/" ) # Add current dir to module path
+find_dependency( Qt5 REQUIRED COMPONENTS
+    Core
+    Widgets
+    Gui
+    OpenGL )
+list( REMOVE_AT CMAKE_MODULE_PATH -1 ) # Undo changes to module path
+
+check_required_components( NodeEditor )

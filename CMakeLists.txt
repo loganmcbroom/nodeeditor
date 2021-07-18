@@ -1,54 +1,11 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required( VERSION 3.2 )
 
-project(NodeEditor CXX)
+project( NodeEditor VERSION 1.0.0 LANGUAGES CXX )
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-set(CMAKE_DEBUG_POSTFIX d)
+set( CMAKE_AUTOMOC ON )
+set( CMAKE_AUTORCC ON )
 
-# Find the QtWidgets library
-find_package(Qt5 5.3 COMPONENTS
-    Core
-    Widgets
-    Gui
-	OpenGL
-	Concurrent
-    )
-
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-
-add_library( nodes
-    include/nodes/internal/Compiler.hpp
-    include/nodes/internal/Connection.hpp
-    include/nodes/internal/ConnectionGeometry.hpp
-    include/nodes/internal/ConnectionGraphicsObject.hpp
-    include/nodes/internal/ConnectionState.hpp
-    include/nodes/internal/ConnectionStyle.hpp
-    include/nodes/internal/DataModelRegistry.hpp
-    include/nodes/internal/Export.hpp
-    include/nodes/internal/FlowScene.hpp
-    include/nodes/internal/FlowView.hpp
-    include/nodes/internal/FlowViewStyle.hpp
-    include/nodes/internal/memory.hpp
-    include/nodes/internal/Node.hpp
-    include/nodes/internal/NodeData.hpp
-    include/nodes/internal/NodeDataModel.hpp
-    include/nodes/internal/NodeGeometry.hpp
-    include/nodes/internal/NodeGraphicsObject.hpp
-    include/nodes/internal/NodePainterDelegate.hpp
-    include/nodes/internal/NodeState.hpp
-    include/nodes/internal/NodeStyle.hpp
-    include/nodes/internal/OperatingSystem.hpp
-    include/nodes/internal/PortType.hpp
-    include/nodes/internal/QStringStdHash.hpp
-    include/nodes/internal/QUuidStdHash.hpp
-    include/nodes/internal/Serializable.hpp
-    include/nodes/internal/Style.hpp
-    include/nodes/internal/StyleCollection.hpp
-    include/nodes/internal/TypeConverter.hpp
-
+add_library( NodeEditor STATIC
     src/Connection.cpp
     src/ConnectionBlurEffect.cpp
     src/ConnectionGeometry.cpp
@@ -72,12 +29,40 @@ add_library( nodes
     src/StyleCollection.cpp
 
     resources/NodeEditor.qrc
-    #resources/convert.png
-    #resources/DefaultStyle.json
     )
-add_library(NodeEditor::NodeEditor ALIAS nodes)
+add_library( NodeEditor::NodeEditor ALIAS NodeEditor )
 
-target_link_libraries(nodes PUBLIC
+target_compile_features( NodeEditor PUBLIC cxx_std_17 )
+set_target_properties( NodeEditor PROPERTIES CXX_EXTENSIONS OFF )
+
+# Set includes
+target_include_directories( NodeEditor
+    PUBLIC
+        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nodes/internal>
+    PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/NodeEditor/internal>
+    )
+
+# Used in another script I'm not messing with
+target_compile_definitions( NodeEditor
+    PUBLIC
+	    NODE_EDITOR_STATIC
+    )
+
+#==================================================================================================
+# Link Libraries
+#==================================================================================================
+
+find_package( Qt5 5.3 COMPONENTS
+    Core
+    Widgets
+    Gui
+	OpenGL
+	Concurrent
+    )
+target_link_libraries( NodeEditor PUBLIC
     Qt5::Core
     Qt5::Widgets
     Qt5::Gui
@@ -85,30 +70,70 @@ target_link_libraries(nodes PUBLIC
 	Qt5::Concurrent
     )
 
-target_include_directories(nodes
-  PUBLIC
-    $<INSTALL_INTERFACE:include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nodes/internal>
+
+#==================================================================================================
+# Installation
+#==================================================================================================
+
+include( GNUInstallDirs )
+set( INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/NodeEditor )
+
+# Copy include folder into install folder
+install( DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
+
+# Create export target, but don't install yet
+install(    
+    TARGETS NodeEditor
+    EXPORT NodeEditorTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
-target_compile_definitions(nodes
-  PUBLIC
-	NODE_EDITOR_STATIC
+# Export the target to a script
+install( 
+    EXPORT NodeEditorTargets
+    FILE NodeEditorTargets.cmake
+    NAMESPACE NodeEditor::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/NodeEditor
+)
+
+# Create a ConfigVersion.cmake file
+include( CMakePackageConfigHelpers )
+write_basic_package_version_file(
+    NodeEditorConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
     )
 
-set_target_properties(nodes
-  PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+# Generate Config file
+configure_package_config_file( 
+    ${CMAKE_CURRENT_LIST_DIR}/cmake/NodeEditorConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfig.cmake
+    INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
     )
 
-# Copy lib to top level /lib folder
-if( CMAKE_BUILD_TYPE STREQUAL "Release" )
-    add_custom_command( TARGET nodes POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:nodes> ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodes.lib )
-endif()
-if( CMAKE_BUILD_TYPE STREQUAL "Debug" )
-    add_custom_command( TARGET nodes POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:nodes> ${CMAKE_CURRENT_SOURCE_DIR}/lib/nodesd.lib )
-endif()
+# Install the config and configversion
+install( 
+    FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfigVersion.cmake
+    DESTINATION     
+        ${INSTALL_CONFIGDIR}
+    )
+
+
+#==================================================================================================
+# Export from the build tree
+#==================================================================================================
+
+export( 
+    EXPORT NodeEditorTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/NodeEditorTargets.cmake"
+    NAMESPACE NodeEditor::
+    )
+
+# Register package in the User Package Registry
+set( CMAKE_EXPORT_PACKAGE_REGISTRY True )
+export( PACKAGE NodeEditor )

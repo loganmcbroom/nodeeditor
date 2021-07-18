@@ -1,8 +1,8 @@
 @PACKAGE_INIT@
 
 # If we aren't currently building the library, include targets
-if( NOT TARGET NodeEditor::nodes )
-    include("${NodeEditor_CMAKE_DIR}/NodeEditorTargets.cmake")
+if( NOT TARGET NodeEditor::NodeEditor )
+    include( "${CMAKE_CURRENT_LIST_DIR}/NodeEditorTargets.cmake" )
 endif()
 
 include( CMakeFindDependencyMacro )

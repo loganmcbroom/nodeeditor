@@ -3,14 +3,13 @@
 #include <QtWidgets/QGraphicsView>
 #include <QUndoCommand>
 
-#include "Export.hpp"
 
 namespace QtNodes
 {
 
 class FlowScene;
 
-class NODE_EDITOR_PUBLIC FlowView
+class FlowView
   : public QGraphicsView
 {
   Q_OBJECT

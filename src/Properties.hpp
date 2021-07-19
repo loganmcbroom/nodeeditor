@@ -4,12 +4,10 @@
 
 #include <QtCore/QVariantMap>
 
-#include "Export.hpp"
-
 namespace QtNodes
 {
 
-class NODE_EDITOR_PUBLIC Properties
+class Properties
 {
 public:
 

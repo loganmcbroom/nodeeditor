@@ -1,14 +1,12 @@
 #pragma once
 
 #include <QtGui/QColor>
-
-#include "Export.hpp"
 #include "Style.hpp"
 
 namespace QtNodes
 {
 
-class NODE_EDITOR_PUBLIC NodeStyle : public Style
+class NodeStyle : public Style
 {
 public:
 

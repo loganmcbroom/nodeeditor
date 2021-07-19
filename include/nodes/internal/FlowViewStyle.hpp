@@ -2,13 +2,12 @@
 
 #include <QtGui/QColor>
 
-#include "Export.hpp"
 #include "Style.hpp"
 
 namespace QtNodes
 {
 
-class NODE_EDITOR_PUBLIC FlowViewStyle : public Style
+class FlowViewStyle : public Style
 {
 public:
 

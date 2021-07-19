@@ -9,7 +9,6 @@
 #include <functional>
 
 #include "QUuidStdHash.hpp"
-#include "Export.hpp"
 #include "DataModelRegistry.hpp"
 #include "TypeConverter.hpp"
 #include "memory.hpp"
@@ -26,7 +25,7 @@ class ConnectionGraphicsObject;
 class NodeStyle;
 
 /// Scene holds connections and nodes.
-class NODE_EDITOR_PUBLIC FlowScene
+class FlowScene
   : public QGraphicsScene
 {
   Q_OBJECT

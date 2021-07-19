@@ -7,7 +7,6 @@
 
 #include "PortType.hpp"
 
-#include "Export.hpp"
 #include "NodeState.hpp"
 #include "NodeGeometry.hpp"
 #include "NodeData.hpp"
@@ -24,7 +23,7 @@ class ConnectionState;
 class NodeGraphicsObject;
 class NodeDataModel;
 
-class NODE_EDITOR_PUBLIC Node
+class Node
   : public QObject
   , public Serializable
 {

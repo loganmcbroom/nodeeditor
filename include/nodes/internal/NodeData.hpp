@@ -2,8 +2,6 @@
 
 #include <QtCore/QString>
 
-#include "Export.hpp"
-
 namespace QtNodes
 {
 
@@ -16,7 +14,7 @@ struct NodeDataType
 /// Class represents data transferred between nodes.
 /// @param type is used for comparing the types
 /// The actual data is stored in subtypes
-class NODE_EDITOR_PUBLIC NodeData
+class NodeData
 {
 public:
 

@@ -10,7 +10,6 @@
 
 #include "NodeDataModel.hpp"
 #include "TypeConverter.hpp"
-#include "Export.hpp"
 #include "QStringStdHash.hpp"
 #include "memory.hpp"
 
@@ -27,7 +26,7 @@ operator<(QtNodes::NodeDataType const & d1,
 
 
 /// Class uses map for storing models (name, model)
-class NODE_EDITOR_PUBLIC DataModelRegistry
+class DataModelRegistry
 {
 
 public:

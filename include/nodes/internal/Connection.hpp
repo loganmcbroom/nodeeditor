@@ -13,7 +13,6 @@
 #include "ConnectionGeometry.hpp"
 #include "TypeConverter.hpp"
 #include "QUuidStdHash.hpp"
-#include "Export.hpp"
 #include "memory.hpp"
 
 class QPointF;
@@ -27,7 +26,7 @@ class ConnectionGraphicsObject;
 class FlowScene;
 
 ///
-class NODE_EDITOR_PUBLIC Connection
+class Connection
   : public QObject
   , public Serializable
 {

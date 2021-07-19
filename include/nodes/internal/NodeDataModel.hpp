@@ -9,7 +9,6 @@
 #include "NodeGeometry.hpp"
 #include "NodeStyle.hpp"
 #include "NodePainterDelegate.hpp"
-#include "Export.hpp"
 #include "memory.hpp"
 
 namespace QtNodes
@@ -26,7 +25,7 @@ class Connection;
 
 class StyleCollection;
 
-class NODE_EDITOR_PUBLIC NodeDataModel
+class NodeDataModel
   : public QObject
   , public Serializable
 {

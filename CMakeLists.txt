@@ -6,9 +6,8 @@ project( NodeEditor VERSION 1.0.0 LANGUAGES CXX )
 set( CMAKE_AUTOMOC ON )
 set( CMAKE_AUTORCC ON )
 
-add_library( NodeEditor STATIC
+add_library( NodeEditor
     # Headers listed for automoc
-    include/nodes/internal/Compiler.hpp
     include/nodes/internal/Connection.hpp
     include/nodes/internal/ConnectionGeometry.hpp
     include/nodes/internal/ConnectionGraphicsObject.hpp
@@ -27,7 +26,6 @@ add_library( NodeEditor STATIC
     include/nodes/internal/NodePainterDelegate.hpp
     include/nodes/internal/NodeState.hpp
     include/nodes/internal/NodeStyle.hpp
-    include/nodes/internal/OperatingSystem.hpp
     include/nodes/internal/PortType.hpp
     include/nodes/internal/QStringStdHash.hpp
     include/nodes/internal/QUuidStdHash.hpp
@@ -65,10 +63,7 @@ add_library( NodeEditor::NodeEditor ALIAS NodeEditor )
 target_compile_features( NodeEditor PUBLIC cxx_std_17 )
 set_target_properties( NodeEditor PROPERTIES 
     CXX_EXTENSIONS OFF
-    #CMAKE_AUTOMOC ON
-    #CMAKE_AUTORCC ON
-    #CMAKE_AUTOUIC ON
-    #DEBUG_POSTFIX d
+    DEBUG_POSTFIX d
     )
 
 # Set includes
@@ -76,6 +71,7 @@ target_include_directories( NodeEditor
     PUBLIC
         $<INSTALL_INTERFACE:include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nodes/internal>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nodes/internal>
@@ -139,9 +135,9 @@ write_basic_package_version_file(
 
 # Generate Config file
 configure_package_config_file( 
-    ${CMAKE_CURRENT_LIST_DIR}/cmake/NodeEditorConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/NodeEditorConfig.cmake
-    INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/NodeEditorConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/NodeEditorConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/NodeEditor
     )
 
 # Install the config and configversion
@@ -158,12 +154,11 @@ install(
 # Export from the build tree
 #==================================================================================================
 
-#export( 
-#    EXPORT NodeEditorTargets
-#    FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/NodeEditorTargets.cmake"
-#    NAMESPACE NodeEditor::
-#    )
+export( EXPORT NodeEditorTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/NodeEditorTargets.cmake"
+    NAMESPACE NodeEditor::
+    )
 
 # Register package in the User Package Registry
-#set( CMAKE_EXPORT_PACKAGE_REGISTRY True )
-#export( PACKAGE NodeEditor )
+set( CMAKE_EXPORT_PACKAGE_REGISTRY True )
+export( PACKAGE NodeEditor )
